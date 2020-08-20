@@ -735,6 +735,11 @@ export enum Primitive {
   INT = 'Int',
   TEXT = 'Text',
   UNKNOWN = '~query_arg_type',
+  BYTE = 'Byte',
+  SHORT = 'Short',
+  CHAR = 'Char',
+  FLOAT = 'Float',
+  DOUBLE = 'Double',
 }
 
 export interface NumberNode extends BaseNode {

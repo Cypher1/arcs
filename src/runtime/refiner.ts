@@ -125,8 +125,7 @@ export class Refinement {
          idx += 1;
       }
       // Find the range of values for the field name over which the refinement is valid.
-      const integralTypes = [Primitive.BIGINT, Primitive.INT, Primitive.LONG];
-      if (integralTypes.includes(a.expression.evalType) || integralTypes.includes(b.expression.evalType)) {
+      if (discreteTypes.includes(a.expression.evalType) || discreteTypes.includes(b.expression.evalType)) {
         const rangeA = BigIntRange.fromExpression(a.expression, {});
         const rangeB = BigIntRange.fromExpression(b.expression, {});
         return rangeA.isSubsetOf(rangeB) ? AtLeastAsSpecific.YES : AtLeastAsSpecific.NO;
@@ -350,7 +349,17 @@ export class BinaryExpression extends RefinementExpression {
   }
 
   rearrange(): RefinementExpression {
-    const numberTypes = [Primitive.NUMBER, Primitive.BIGINT];
+    const numberTypes = [
+      Primitive.FLOAT,
+      Primitive.DOUBLE,
+      Primitive.NUMBER,
+      Primitive.CHAR,
+      Primitive.BYTE,
+      Primitive.SHORT,
+      Primitive.INT,
+      Primitive.LONG,
+      Primitive.BIGINT,
+    ];
     const leftNumeric = numberTypes.includes(this.leftExpr.evalType);
     const rightNumeric = numberTypes.includes(this.rightExpr.evalType);
     if (this.evalType === Primitive.BOOLEAN && leftNumeric && rightNumeric) {
@@ -1260,6 +1269,12 @@ export class BigIntRange {
     switch (type) {
       case Primitive.BOOLEAN:
         return new BigIntRange([BigIntSegment.closedClosed(b0, b0), BigIntSegment.closedClosed(b1, b1)], type);
+      case Primitive.BYTE:
+        return new BigIntRange([BigIntSegment.closedClosed(BYTE_MIN, BYTE_MAX)], type);
+      case Primitive.SHORT:
+        return new BigIntRange([BigIntSegment.closedClosed(SHORT_MIN, SHORT_MAX)], type);
+      case Primitive.CHAR:
+        return new BigIntRange([BigIntSegment.closedClosed(CHAR_MIN, CHAR_MAX)], type);
       case Primitive.INT:
         return new BigIntRange([BigIntSegment.closedClosed(INT_MIN, INT_MAX)], type);
       case Primitive.LONG:
@@ -1622,6 +1637,12 @@ interface OperatorInfo {
 const numericTypes: Primitive[] = [Primitive.NUMBER].concat(discreteTypes);
 
 // From https://kotlinlang.org/docs/reference/basic-types.html
+const BYTE_MIN: bigint = BigInt('-128'); // -2**8
+const BYTE_MAX: bigint = BigInt('127'); // 2**7 - 1
+const SHORT_MIN: bigint = BigInt('-32768'); // -2**16
+const SHORT_MAX: bigint = BigInt('32767'); // 2**15 - 1
+const CHAR_MIN: bigint = BigInt('0');
+const CHAR_MAX: bigint = BigInt('65535'); // 2**16
 const INT_MIN: bigint = BigInt('-2147483648'); // -2**31
 const INT_MAX: bigint = BigInt('2147483647'); // 2**31 - 1
 const LONG_MIN: bigint = BigInt('-9223372036854775808'); // -2**63
