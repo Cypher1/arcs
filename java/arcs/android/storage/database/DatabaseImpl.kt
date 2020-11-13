@@ -2034,7 +2034,7 @@ class DatabaseImpl(
 
   companion object {
     @VisibleForTesting
-    const val DB_VERSION = 6
+    const val DB_VERSION = 7
 
     private const val TABLE_STORAGE_KEYS = "storage_keys"
     private const val TABLE_COLLECTION_ENTRIES = "collection_entries"
@@ -2343,6 +2343,7 @@ class DatabaseImpl(
       """.trimIndent().split("\n\n")
     private val CREATE_VERSION_4 = CREATE_VERSION_3
     private val CREATE_VERSION_5 = CREATE_VERSION_3
+    private val CREATE_VERSION_7 = CREATE_VERSION_6
 
     private val DROP_VERSION_2 =
       """
@@ -2379,8 +2380,7 @@ class DatabaseImpl(
       "ALTER TABLE entity_refs ADD COLUMN is_hard_ref INTEGER;"
     )
     private val VERSION_7_MIGRATION = arrayOf(
-      "INSERT INTO types (id, name, is_primitive) VALUES (11, \"ArcsInstant\", 1)",
-      "INSERT INTO types (id, name, is_primitive) VALUES (11, \"ArcsDuration\", 1)"
+      "INSERT INTO types (id, name, is_primitive) VALUES (11, \"ArcsInstant\", 1)"
     )
 
     @VisibleForTesting
@@ -2398,8 +2398,8 @@ class DatabaseImpl(
       3 to CREATE_VERSION_3,
       4 to CREATE_VERSION_3,
       5 to CREATE_VERSION_3,
-      6 to CREATE_VERSION_6
-      // TODO(b/172167055): add 7 when we are ready for that migration.
+      6 to CREATE_VERSION_6,
+      7 to CREATE_VERSION_7
     )
 
     private val CREATE = checkNotNull(CREATES_BY_VERSION[DB_VERSION])

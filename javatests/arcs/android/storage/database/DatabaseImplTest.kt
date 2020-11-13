@@ -15,9 +15,11 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import arcs.android.common.forEach
 import arcs.android.common.forSingleResult
 import arcs.android.common.getNullableBoolean
 import arcs.android.common.map
+import arcs.android.common.transaction
 import arcs.android.storage.database.DatabaseImpl.FieldClass
 import arcs.core.common.Referencable
 import arcs.core.crdt.VersionMap
@@ -79,30 +81,20 @@ class DatabaseImplTest {
 
   @Test
   fun getTypeId_primitiveTypeIds() = runBlockingTest {
-    assertThat(database.getTypeIdForTest(FieldType.Boolean))
-      .isEqualTo(PrimitiveType.Boolean.ordinal)
-    assertThat(database.getTypeIdForTest(FieldType.Number))
-      .isEqualTo(PrimitiveType.Number.ordinal)
-    assertThat(database.getTypeIdForTest(FieldType.Text))
-      .isEqualTo(PrimitiveType.Text.ordinal)
-    assertThat(database.getTypeIdForTest(FieldType.BigInt))
-      .isEqualTo(PrimitiveType.BigInt.ordinal)
-    assertThat(database.getTypeIdForTest(FieldType.Byte))
-      .isEqualTo(PrimitiveType.Byte.ordinal)
-    assertThat(database.getTypeIdForTest(FieldType.Char))
-      .isEqualTo(PrimitiveType.Char.ordinal)
-    assertThat(database.getTypeIdForTest(FieldType.Double))
-      .isEqualTo(PrimitiveType.Double.ordinal)
-    assertThat(database.getTypeIdForTest(FieldType.Float))
-      .isEqualTo(PrimitiveType.Float.ordinal)
-    assertThat(database.getTypeIdForTest(FieldType.Instant))
-      .isEqualTo(PrimitiveType.Instant.ordinal)
-    assertThat(database.getTypeIdForTest(FieldType.Int))
-      .isEqualTo(PrimitiveType.Int.ordinal)
-    assertThat(database.getTypeIdForTest(FieldType.Long))
-      .isEqualTo(PrimitiveType.Long.ordinal)
-    assertThat(database.getTypeIdForTest(FieldType.Short))
-      .isEqualTo(PrimitiveType.Short.ordinal)
+    val typesInfo = getPrimitiveTypesInfo(database.readableDatabase)
+    PrimitiveType.values().forEach {
+      // Check that the name used in the DB is the same as that used in the enum.
+      assertThat(typesInfo[it.ordinal.toLong()]).isEqualTo(it.name)
+    }
+    typesInfo.forEach { id, name ->
+      if (it.ordinal === REFERENCE_TYPE_SENTINEL) {
+        assertThat(name).isEqualTo(REFERENCE_TYPE_SENTINEL_NAME)
+      } else {
+        // Check that primitive type info in the database is in the primitives enum with the same name.
+        assertThat(PrimitiveType.valueOf(name).ordinal).isEqualTo(id)
+      }
+    }
+    assertThat(PrimitiveType.values().size).isEqualTo(typesInfo.values.size)
   }
 
   @Test
@@ -561,7 +553,8 @@ class DatabaseImplTest {
           "double" to FieldType.Double,
           "txtlst" to FieldType.ListOf(FieldType.Text),
           "lnglst" to FieldType.ListOf(FieldType.Long),
-          "bigint" to FieldType.BigInt,
+          "bigintlst" to FieldType.ListOf(FieldType.BigInt),
+          "instantlst" to FieldType.ListOf(FieldType.Instant),
           "inlined" to FieldType.InlineEntity("inlineHash"),
           "inlinelist" to FieldType.ListOf(FieldType.InlineEntity("inlineHash"))
         ),
@@ -4052,7 +4045,25 @@ class DatabaseImplTest {
       )
     )
   }
+
+  /**
+   * Gets the types info at the last version.
+   */
+  private fun getPrimitiveTypesInfo(db: SQLiteDatabase): Map<Long, String> {
+    val typesInfo = mutableMapOf<Long, String>()
+    db.transaction {
+      rawQuery(
+        "SELECT id, name FROM types WHERE is_primitive = 1",
+        emptyArray()
+      ).forEach {
+        val id: Long = it.getLong(0)
+        typesInfo[id] = it.getString(1)
+      }
+    }
+    return typesInfo
+  }
 }
+
 
 private fun newSchema(
   hash: String,
